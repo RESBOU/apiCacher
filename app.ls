@@ -1,15 +1,17 @@
 require! {
   woden
 }
+port = 9000
 
-woden = new Woden({})
-
+proxy = new woden()
 DS = {}
-woden.store do
+
+proxy.store do
     get: ( key, cb ) -> 
         callback void, DS[key]
     set: ( key, value, cb, cachetimeMS ) -> 
         DS[ key ] = value
         callback( )
         
-woden.listen 9000 
+proxy.listen port
+console.log "in memory cache listening @ #{ port }"
