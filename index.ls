@@ -1,3 +1,5 @@
+# autocompile
+
 require! {
   lodash: { assign }
   url
