@@ -1,7 +1,7 @@
 # autocompile
 
 require! {
-  lodash: { assign }
+  leshdash: { wait, assign }
   url
   colors
   http
