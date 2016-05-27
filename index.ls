@@ -12,10 +12,7 @@ require! {
 }
 
 key = (req) ->
-  sha = crypto.createHash 'sha256'
-  sha.update [ req.method, req.url ].join('/')
-  sha.digest 'base64'
-
+  req.method + " " + req.url
 
 class Store
   get: -> ...
@@ -30,7 +27,7 @@ class InMemory extends Store
   
   set: (req, data, cb) ->
     @store[ key(req) ] = data
-    if cb then cb()
+    if cb then cb!
     
   get: (req, cb) ->
     cb @store[ key(req) ]
@@ -45,7 +42,7 @@ class Json extends InMemory
     @loadJson @path
 
   saveJson: (path) ->
-    fs.writeFileSync path, JSON.stringify @store
+    fs.writeFileSync path, JSON.stringify @store, null, 2
 
   loadJson: (path) ->
     try
