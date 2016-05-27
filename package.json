@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "airbnb": "node index.js https://api.airbnb.com/ 9000"
+    "airbnb": "node index.js --target https://api.airbnb.com/ --port 9000 --persist airbnb"
   },
   "keywords": [],
   "author": "",
