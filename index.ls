@@ -1,7 +1,8 @@
 # autocompile
 
 require! {
-  leshdash: { wait, assign }
+  fs
+  leshdash: { wait, assign, keys }
   url
   colors
   http
@@ -10,15 +11,22 @@ require! {
   buffer
 }
 
-
 key = (req) ->
   sha = crypto.createHash 'sha256'
   sha.update [ req.method, req.url ].join('/')
   sha.digest 'base64'
 
 
-class InMemory
-  -> @store = {}
+class Store
+  get: -> ...
+  set: -> ...
+    
+class InMemory extends Store
+  (options) ->
+    def = do
+      store: {}
+      
+    assign @, def, options
   
   set: (req, data, cb) ->
     @store[ key(req) ] = data
@@ -27,7 +35,30 @@ class InMemory
   get: (req, cb) ->
     cb @store[ key(req) ]
 
-  
+
+class Json extends InMemory
+  (options) ->
+    super ...
+    
+    @path = './json/' + @path + ".json"
+    console.log "using json store #{@path}"
+    @loadJson @path
+
+  saveJson: (path) ->
+    fs.writeFileSync path, JSON.stringify @store
+
+  loadJson: (path) ->
+    try
+      fs.statSync path
+      @store = require path
+      console.log keys @store.store
+    catch
+      console.warn "#{path} not found, will create new one"
+
+  set: (req, cb) ->
+    super ...
+    @saveJson @path
+            
 class Cacher
   (options) ->
     def = do
@@ -56,7 +87,6 @@ class Cacher
     proxy.on 'proxyRes',  (proxyRes, req, res) ~> 
       data = []
       console.log "←", colors.red proxyRes.statusCode
-      #console.log 'RAW Response from the target', JSON.stringify proxyRes.headers, true, 2
 
       proxyRes.on 'data', -> data.push it
 
@@ -64,10 +94,9 @@ class Cacher
         cacheEntry = do
           headers: proxyRes.headers
           status: proxyRes.statusCode
-          body: Buffer.concat data
+          body: String Buffer.concat data
 
         @store.set req, cacheEntry
-
 
     proxy.on 'proxyReq', (proxyReq, req, res, options) ~>
       proxyReq.setHeader 'host', url.parse(@target).hostname
@@ -75,13 +104,20 @@ class Cacher
     proxy.on 'error', (e) -> 
       console.log 'error', e
 
-    server.listen port
+    server.listen @port
 
 
 module.exports = Cacher
 
-
-if require.main is module then
-  cacher = new Cacher port: port = Number(process.argv.pop()), target: target = process.argv.pop() 
-  console.log "proxying #{port} → #{target}"
+if require.main is module
+  def = do
+    port: 9000
+    
+  argv = assign def, require('minimist') process.argv.slice 2
+  
+  if argv.persist then store = new Json path: argv.persist
+  else store = new InMemory()
+    
+  cacher = new Cacher port:argv.port, target: argv.target, store: store
+  console.log "proxying #{cacher.port} → #{cacher.target}"
 
